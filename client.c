@@ -1,9 +1,10 @@
 #include "csapp.h"
 
-#define VERSION " HTTP/1.1\r\n"
+#define VERSION " HTTP/1.0\r\n"
 
 char *allcaps(char *str);
 void host2header(char *host, char *header);
+void genrequest(char *request, char *method, char *uri);
 
 int main(int argc, char **argv)
 {
@@ -33,32 +34,28 @@ int main(int argc, char **argv)
   Rio_readinitb(&rio, clientfd);
   
   while(Fgets(buf, MAXLINE, stdin)!=NULL){
-
     sscanf(buf ,"%s %s %s", method, uri, version);
     if(!strcasecmp(method, "GET")){
+      genrequest(buf,"GET",uri); /* generate request into buf */
+      strcat(buf, requesthdr); /* concatenate header to buf */	
 
-      printf("<%s>\n",buf);
-      /* create request string */
-      strcpy(buf,"GET");
-      if (uri[strlen(uri)-1] == '/')
-	strcat(uri, "home.html");
-      strcat(buf," ");
-      strcat(buf, uri);
-      /* add header */
-      strcat(buf, VERSION);
-      strcat(buf, requesthdr);
-      printf("%s",buf);
+      file = Fopen(uri+1,"w");  
 
-      file = Fopen(uri+1,"w");
-      printf("opened file: %s\n",uri);
-
-      /* send a get command to the server */
+      /* send request+header to host */
       Rio_writen(clientfd, buf, strlen(buf));
-      while(Rio_readlineb(&rio,buf,MAXLINE))
-	Fputs(buf, file)
-	  ;
-	
-      printf("wrote to file: %s\n",uri);
+
+      /* Read the server response header */
+      do{
+	Rio_readlineb(&rio,buf,MAXLINE);
+	printf("%s\n",buf);
+      }while(strcmp(buf,"\r\n"));
+      printf("end of server response header\n");
+      
+      while(Rio_readlineb(&rio,buf,MAXLINE)){
+	Fputs(buf,file);
+      }
+      
+      //printf("wrote to file: %s\n",uri);
       Fclose(file);
     }
   }
@@ -90,4 +87,13 @@ void host2header(char *host,char *header){
   strcat(header,"\r\n\r\n");
 }
 
-//void genrequest(char *
+void genrequest(char *request, char *method, char *uri){
+      /* create request string */
+      strcpy(request,"GET");
+      if (uri[strlen(uri)-1] == '/')
+	strcat(uri, "index.html");
+      strcat(request," ");
+      strcat(request, uri);
+      strcat(request, VERSION);
+      printf("%s",request);
+}

@@ -3,7 +3,7 @@
 #define VERSION " HTTP/1.0\r\n"
 
 char *allcaps(char *str);
-void host2header(char *host, char *header);
+void genheader(char *host, char *header);
 void genrequest(char *request, char *method, char *uri);
 
 int main(int argc, char **argv)
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   port=atoi(argv[2]);
 
   /* generate the request header for this host */
-  host2header(host,requesthdr);
+  genheader(host,requesthdr);
  
   clientfd = Open_clientfd(host, port);
   Rio_readinitb(&rio, clientfd);
@@ -80,8 +80,8 @@ char *allcaps(char *str)
   return str;
 }
 
-/* host2header - compiles a HTTP request header from host name */
-void host2header(char *host,char *header){
+/* genheader - compiles a HTTP request header from host name */
+void genheader(char *host,char *header){
   strcpy(header,"Host: ");
   strcat(header,host);
   strcat(header,"\r\n\r\n");

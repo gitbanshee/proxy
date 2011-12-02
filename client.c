@@ -3,7 +3,11 @@
 #define VERSION " HTTP/1.0\r\n"
 
 char *allcaps(char *str);
+<<<<<<< HEAD
 void host2header(char *host, char *header);
+=======
+void genheader(char *host, char *header);
+>>>>>>> 75a6154fe1078cbf009ef8fb2449ee488b748236
 void genrequest(char *request, char *method, char *uri);
 
 int main(int argc, char **argv)
@@ -28,7 +32,11 @@ int main(int argc, char **argv)
   port=atoi(argv[2]);
 
   /* generate the request header for this host */
+<<<<<<< HEAD
   host2header(host,requesthdr);
+=======
+  genheader(host,requesthdr);
+>>>>>>> 75a6154fe1078cbf009ef8fb2449ee488b748236
  
   clientfd = Open_clientfd(host, port);
   Rio_readinitb(&rio, clientfd);
@@ -80,8 +88,13 @@ char *allcaps(char *str)
   return str;
 }
 
+<<<<<<< HEAD
 /* host2header - compiles a HTTP request header from host name */
 void host2header(char *host,char *header){
+=======
+/* genheader - compiles a HTTP request header from host name */
+void genheader(char *host,char *header){
+>>>>>>> 75a6154fe1078cbf009ef8fb2449ee488b748236
   strcpy(header,"Host: ");
   strcat(header,host);
   strcat(header,"\r\n\r\n");

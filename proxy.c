@@ -10,7 +10,7 @@
  */
 
 #define _GNU_SOURCE
-#define PORT 80
+#define PORT 57020
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +30,7 @@ void clienterror(int fd, char *cause, char *errnum,
 
 void genheader(char *host, char *header); 
 void genrequest(char *request, char *method, char *uri);
-void parseURL(char* url, char* host, char* uri);
+void parseURL(char* url, char* host, char* uri, char* version);
 /* 
  * MAIN CODE AREA 
  */
@@ -51,6 +51,7 @@ int main(int argc, char **argv)
     clientlen = sizeof(clientaddr);
     connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
     doit(connfd);
+
     Close(connfd);
   }
 }
@@ -71,20 +72,22 @@ void doit(int fd)
   int hostfd;
   /* Ren's Local Vars END */
 
-  
+
   /* Read request line and headers */
   Rio_readinitb(&rio_c, fd);
   Rio_readlineb(&rio_c, buf, MAXLINE);
   sscanf(buf, "%s %s %s", method, uri, version);
   if (strcasecmp(method, "GET")) { 
     clienterror(fd, method, "501", "Not Implemented",   
-		"Tiny does not implement this method");
+                "Tiny does not implement this method");
     return;
   }
+  printf("STUFF FROM THE CLIENT:\n");
+  printf("%s\n",buf);
   read_requesthdrs(&rio_c);
 
   /* Ren's code */
-  parseURL(buf, host, uri); /* parse url for hostname and uri */
+  parseURL(buf, host, uri, version); /* parse url for hostname and uri */
   hostfd = Open_clientfd(host, PORT); /* connect to host as client */
   Rio_readinitb(&rio_h, hostfd); /* set up host file discriptor */
 
@@ -92,13 +95,17 @@ void doit(int fd)
   genrequest(request, method, uri);
   genheader(host, header);
   strcat(request, header);
+  printf("%s\n",request); 
   Rio_writen(hostfd, request, strlen(request));
 
   /* stream information from server to client */
+  printf("STUFF FROM THE SERVER:\n");
   while(Rio_readlineb(&rio_h, buf, MAXLINE)){
+    printf("%s\n",buf);
     Rio_writen(fd, buf, MAXLINE);
   }
 
+  printf("stream ended\n");
   /* Ren's code */
 }
 
@@ -157,7 +164,7 @@ void serve_static(int fd, char *filename, int filesize)
 {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
- 
+
   /* Send response headers to client */
   get_filetype(filename, filetype);
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
@@ -201,7 +208,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
   Rio_writen(fd, buf, strlen(buf));
   sprintf(buf, "Server: Tiny Web Server\r\n");
   Rio_writen(fd, buf, strlen(buf));
-  
+
   if (Fork() == 0) { /* child */
     /* Real server would set all CGI vars here */
     setenv("QUERY_STRING", cgiargs, 1); 
@@ -245,7 +252,7 @@ void genrequest(char *request, char *method, char *uri){
   strcat(request," ");
   strcat(request, uri);
   strcat(request, VERSION);
-  printf("%s",request);
+  //printf("%s",request);
 }
 
 /* genheader - generates a HTTP request header */
@@ -259,30 +266,35 @@ void genheader(char *host,char *header){
 
 /* Given a website, parses the url into its host and argument.
 
-Input: char* url (Contains the full URL.), char** host (Garbage.), char** uri (Garbage.)
-Output: char* url (Garbage.), char** host (Host name of the URL. ex: www.cmu.edu.), char** uri (Argument of the URL. Contains the remaining directory of the URL.)
+   Input: char* url (Contains the full URL.), char** host (Garbage.), char** uri (Garbage.)
+   Output: char* url (Garbage.), char** host (Host name of the URL. ex: www.cmu.edu.), char** uri (Argument of the URL. Contains the remaining directory of the URL.)
 
-Requires string.h and stdio.h. strchr(s, c) finds the first occurence of char c i
-n string s.
+   Requires string.h and stdio.h. strchr(s, c) finds the first occurence of char c i
+   n string s.
 */
 void parseURL(char* url, char* host, char* uri, char* version)
 {
+  int len = 0;
+  int pos;
+  int offset = 0; /* http:// has a length of 7. We should really be looking for the first space, but this is still guaranteed to work because it will be the first instance of http */
+  char nohttp[MAXLINE];
+  char method[MAXLINE];
 
-    int len = strlen(url);
-    int pos;
-    int offset = strcspn(url, "http://") + 7; /* http:// has a length of 7. We should really be looking for the first space, but this is still guaranteed to work because it will be the first instance of http */
-    char nohttp[len - offset];
-    
-    printf("input -- url: %s\n", url);
-        
-    /* Removes the http:// from an url. */
-    strcpy(nohttp, url + offset);
-    
-    printf("string nohttp: %s\n", nohttp);
+  sscanf(url, "%s %s %s", method, url, version);
+  offset = strcspn(url, "http://") + 7;
+  len = strlen(url);
+  //printf("input -- url: %s\tmethod: %s\tversion: %s\n", url, method, version);
 
-    /* Searches for the url by looking for the first slash. */
-    pos = strcspn(nohttp, "/");
-    strncpy(host, nohttp, len - 1);
-    strncpy(uri, nohttp + pos, len - pos);
+  /* Removes the http:// from an url. */
+  strcpy(nohttp, url + offset);
+
+  //printf("string nohttp: %s\n", nohttp);
+
+  /* Searches for the url by looking for the first slash. */
+  pos = strcspn(nohttp, "/");
+  strncpy(host, nohttp, pos);
+  strncpy(uri, nohttp + pos, len - pos);
+
+  printf("output: url: %s\thost: %s\t uri: %s\n", url, host, uri);
 }
 
